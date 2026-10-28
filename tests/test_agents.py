@@ -40,3 +40,29 @@ def test_wrong_order():
 
 def test_invalid_status():
     assert review(["A"], [{"step": "A", "status": "failed"}])["passed"] is False
+
+from planner import plan_task
+
+
+def test_planner_character():
+    plan = plan_task("Tao nhan vat game 2D")
+    assert len(plan) == 3
+    assert "nhan vat" in plan[0].lower()
+
+
+def test_planner_menu():
+    plan = plan_task("Tao menu game")
+    assert len(plan) == 3
+    assert "menu" in plan[0].lower()
+
+
+def test_planner_combat():
+    plan = plan_task("Tao he thong chien dau")
+    assert len(plan) == 3
+    assert "chien dau" in plan[0].lower()
+
+
+def test_planner_default():
+    plan = plan_task("Tao he thong luu game")
+    assert len(plan) == 3
+    assert "Phan tich" in plan[0]
