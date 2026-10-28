@@ -82,3 +82,45 @@ def test_generated_player_compiles(tmp_path):
 
     source = file_path.read_text(encoding="utf-8")
     compile(source, str(file_path), "exec")
+    
+from reviewer import review_player
+
+
+def test_review_player_valid(tmp_path):
+    file_path = generate_player(str(tmp_path))
+    result = review_player(file_path)
+
+    assert result["passed"] is True
+    assert result["errors"] == []
+
+
+def test_review_player_missing_file(tmp_path):
+    result = review_player(tmp_path / "missing.py")
+
+    assert result["passed"] is False
+    assert "File khong ton tai" in result["errors"]
+
+
+def test_review_player_syntax_error(tmp_path):
+    file_path = tmp_path / "player.py"
+    file_path.write_text("class Player(", encoding="utf-8")
+
+    result = review_player(file_path)
+
+    assert result["passed"] is False
+
+
+def test_review_player_missing_method(tmp_path):
+    file_path = tmp_path / "player.py"
+    file_path.write_text(
+        "class Player:\n"
+        "    def __init__(self):\n"
+        "        pass\n",
+        encoding="utf-8"
+    )
+
+    result = review_player(file_path)
+
+    assert result["passed"] is False
+    assert "Thieu ham move" in result["errors"]
+    assert "Thieu ham get_position" in result["errors"]
