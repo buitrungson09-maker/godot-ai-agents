@@ -124,3 +124,25 @@ def test_review_player_missing_method(tmp_path):
     assert result["passed"] is False
     assert "Thieu ham move" in result["errors"]
     assert "Thieu ham get_position" in result["errors"]
+
+from main import run_pipeline
+
+
+def test_pipeline_generates_player(tmp_path):
+    result = run_pipeline(
+        "Tao nhan vat game 2D",
+        output_dir=str(tmp_path)
+    )
+
+    assert result["source_report"]["passed"] is True
+    assert (tmp_path / "player.py").exists()
+
+
+def test_pipeline_other_task(tmp_path):
+    result = run_pipeline(
+        "Tao menu game",
+        output_dir=str(tmp_path)
+    )
+
+    assert "generated_file" not in result
+    assert not (tmp_path / "player.py").exists()
