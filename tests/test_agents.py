@@ -66,3 +66,19 @@ def test_planner_default():
     plan = plan_task("Tao he thong luu game")
     assert len(plan) == 3
     assert "Phan tich" in plan[0]
+from developer import generate_player
+
+
+def test_generate_player(tmp_path):
+    file_path = generate_player(str(tmp_path))
+
+    assert file_path.exists()
+    assert file_path.name == "player.py"
+    assert "class Player:" in file_path.read_text(encoding="utf-8")
+
+
+def test_generated_player_compiles(tmp_path):
+    file_path = generate_player(str(tmp_path))
+
+    source = file_path.read_text(encoding="utf-8")
+    compile(source, str(file_path), "exec")
