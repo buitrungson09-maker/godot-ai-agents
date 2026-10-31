@@ -1,0 +1,4 @@
+# Godot Editor MCP - https://github.com/hybridindie/godot-mcp
+# MIT License. Cai trong moi truong Python 3.11 rieng.
+# Ban 2026.10.24, can addon Godot tu upstream release.
+godot-editor-mcp==2026.10.24
