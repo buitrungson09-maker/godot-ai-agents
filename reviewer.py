@@ -64,3 +64,51 @@ def review_player(file_path: str | Path) -> dict:
         "errors": errors,
         "mode": "source review"
     }
+
+def review_player_behavior(file_path: str | Path) -> dict:
+    """Kiem tra hanh vi Player ma khong chay file duoc tao."""
+
+    source_report = review_player(file_path)
+
+    if not source_report["passed"]:
+        return {
+            "passed": False,
+            "errors": source_report["errors"],
+            "mode": "behavior review"
+        }
+
+    path = Path(file_path)
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+
+    player_class = next(
+        node for node in tree.body
+        if isinstance(node, ast.ClassDef) and node.name == "Player"
+    )
+
+    methods = {
+        node.name: node
+        for node in player_class.body
+        if isinstance(node, ast.FunctionDef)
+    }
+
+    errors = []
+
+    move_method = methods["move"]
+
+    # Kiem tra 4 huong di chuyen duoc khai bao
+    directions = {
+        node.value
+        for node in ast.walk(move_method)
+        if isinstance(node, ast.Constant)
+        and isinstance(node.value, str)
+    }
+
+    for direction in ("up", "down", "left", "right"):
+        if direction not in directions:
+            errors.append(f"Thieu huong di chuyen: {direction}")
+
+    return {
+        "passed": len(errors) == 0,
+        "errors": errors,
+        "mode": "behavior review"
+    }

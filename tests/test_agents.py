@@ -146,3 +146,30 @@ def test_pipeline_other_task(tmp_path):
 
     assert "generated_file" not in result
     assert not (tmp_path / "player.py").exists()
+
+from reviewer import review_player_behavior
+
+
+def test_player_behavior_valid(tmp_path):
+    file_path = generate_player(str(tmp_path))
+    result = review_player_behavior(file_path)
+
+    assert result["passed"] is True
+
+
+def test_player_behavior_missing_direction(tmp_path):
+    file_path = tmp_path / "player.py"
+
+    file_path.write_text(
+        "class Player:\n"
+        "    def __init__(self): pass\n"
+        "    def move(self, direction):\n"
+        "        if direction == 'up': pass\n"
+        "    def get_position(self): pass\n",
+        encoding="utf-8"
+    )
+
+    result = review_player_behavior(file_path)
+
+    assert result["passed"] is False
+    assert "Thieu huong di chuyen: right" in result["errors"]
