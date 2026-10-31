@@ -196,3 +196,27 @@ def test_coordinator_menu_task(tmp_path):
 
     assert result["status"] == "planning_only"
     assert "generated_file" not in result
+
+from developer import generate_sword_slash
+
+
+def test_generate_sword_slash(tmp_path):
+    file_path = generate_sword_slash(tmp_path)
+
+    assert file_path.exists()
+    assert file_path.suffix == ".gd"
+
+    content = file_path.read_text(encoding="utf-8")
+    assert "extends Node2D" in content
+    assert "func use_skill()" in content
+    assert "skill_activated.emit(damage)" in content
+
+
+def test_generate_sword_slash_repeat(tmp_path):
+    first_file = generate_sword_slash(tmp_path)
+    first_content = first_file.read_text(encoding="utf-8")
+
+    second_file = generate_sword_slash(tmp_path)
+
+    assert first_file == second_file
+    assert second_file.read_text(encoding="utf-8") == first_content
