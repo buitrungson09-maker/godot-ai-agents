@@ -173,3 +173,26 @@ def test_player_behavior_missing_direction(tmp_path):
 
     assert result["passed"] is False
     assert "Thieu huong di chuyen: right" in result["errors"]
+
+from coordinator import coordinate
+
+
+def test_coordinator_player_task(tmp_path):
+    result = coordinate(
+        "Tao nhan vat game 2D",
+        output_dir=str(tmp_path)
+    )
+
+    assert result["status"] == "ready_for_manual_review"
+    assert result["source_report"]["passed"] is True
+    assert result["behavior_report"]["passed"] is True
+
+
+def test_coordinator_menu_task(tmp_path):
+    result = coordinate(
+        "Tao menu game",
+        output_dir=str(tmp_path)
+    )
+
+    assert result["status"] == "planning_only"
+    assert "generated_file" not in result
