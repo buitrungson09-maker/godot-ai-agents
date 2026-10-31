@@ -1,58 +1,80 @@
-# Midterm Week 09 — 3-Agent Python Workflow
+# Godot AI Agents — Trợ lý 4 Agent phát triển game Godot 2D
 
-## Mục tiêu
-MVP Python thuần chạy offline theo đề tài **#18 OpenAI Agents SDK (Python)** trong danh mục CocAgent. Ba vai trò **Planner → Developer → Reviewer** lần lượt chia bước, mô phỏng công việc, và kiểm tra tính đầy đủ. Đây là **mô phỏng deterministic, KHÔNG phải ba LLM/AI agent thực sự**. Developer không sinh code hoặc chạy lệnh.
+Dự án Python hỗ trợ phát triển game tu tiên 2D trên **Godot 4**, kế thừa bài tập 3 Agent và phát triển thành bốn vai trò:
 
-## Nguồn tham khảo
-- [Danh mục 20 dự án Week 09 — mục #18](https://github.com/CocAgent/python-journey/blob/main/weeks/week-09-midterm-project/project-ideas/catalog-20-du-an.md)
-- [OpenAI Agents SDK — mã nguồn](https://github.com/openai/openai-agents-python)
-- [Tài liệu chính thức](https://openai.github.io/openai-agents-python/)
-- [Rubric 10 điểm](https://github.com/CocAgent/python-journey/blob/main/weeks/week-09-midterm-project/project-ideas/rubric-10-diem.md)
+- **Coordinator**: Điều phối Planner → Developer → Reviewer, tổng hợp trạng thái.
+- **Planner**: Phân tích yêu cầu và đề xuất các bước.
+- **Developer**: Sinh mã nguồn Python mẫu (hướng tới GDScript cho Godot).
+- **Reviewer**: Kiểm tra tĩnh cú pháp, lớp/hàm và từ khóa hướng di chuyển.
 
-Đây là mã tự viết lấy cảm hứng từ ý tưởng orchestration, **không sao chép SDK** và **không phụ thuộc SDK/API key**. Hướng nâng cấp sau W15: thay các hàm mô phỏng bằng Agent/Runner, thêm tool có kiểm soát và approval.
+> **Trạng thái:** v1.6 là hệ thống Python **offline/deterministic**, chưa phải bốn AI Agent chạy bằng LLM, chưa thao tác trực tiếp với Godot. Kết quả kiểm thử baseline đã được xác nhận là **22 passed** trước khi thêm dependency. Kiểm tra tĩnh không đồng nghĩa đã kiểm tra hành vi khi chạy game.
 
-## Yêu cầu
-Python 3.12+; Windows PowerShell/VS Code. Không cần Internet khi chạy chương trình chính.
+## Bắt đầu với pipeline hiện có
 
-## Chạy
-Từ thư mục gốc repo:
+Cần Python 3.12+ và VS Code/PowerShell (người phát triển đang sử dụng Python 3.14).
 
 ```powershell
-cd projects/midterm-3-agent
-python main.py
-```
-
-Nhập: `Tao nhan vat di chuyen 2D`.
-Kết quả: 3 bước kế hoạch, 3 dòng mô phỏng và `passed: True`.
-
-## Kiểm thử
-```powershell
+cd D:\godot-ai-agents
 python -m pip install -r requirements-dev.txt
-python -m pytest -q tests
+python coordinator.py
+python -m pytest -v tests
 ```
-Có 6 test cho đường chạy thường, input rỗng, plan rỗng, thiếu bước, sai thứ tự và status sai. Kết quả chỉ được công nhận sau khi chạy thực tế.
 
-## Input / output và trường hợp biên
-- Input: chuỗi yêu cầu không rỗng.
-- Output: dict chứa task, plan, work, report.
-- Input biên: chuỗi rỗng/khoảng trắng → ValueError, CLI in lỗi.
-- Hạn chế: không hiểu ngữ nghĩa yêu cầu, không tạo game, không gọi LLM, reviewer chỉ so khớp bước và trạng thái.
+Ví dụ yêu cầu: `Tao nhan vat di chuyen trong game 2D`.
 
-## Kiến trúc
-- `planner.py:plan_task` kiểm tra input và tạo 3 bước.
-- `developer.py:develop` tạo nhật ký mô phỏng.
-- `reviewer.py:review` so sánh kế hoạch với nhật ký.
-- `main.py:run_pipeline` điều phối; `main` cung cấp CLI.
+Lưu ý: file được sinh ra nằm trong `generated/`. **Không tự động chép hay ghi đè file trong game Godot thật.** Quy trình duyệt thủ công phải được duy trì.
 
-## An toàn, ghi công và minh chứng
-Không đọc/ghi file dự án khác, không thực thi code sinh tự động, không yêu cầu secret. Chỉ dùng dữ liệu giả. Để nộp: lưu output terminal thực tế, commit SHA, lỗi đã sửa, và ảnh demo vào evidence.md. Không tuyên bố PASS khi chưa kiểm tra thực tế.
+## Hai dự án mã nguồn mở được chọn
 
-## Tài nguyên bổ sung
-- [Sơ đồ và giải thích kiến trúc](docs/architecture.md)
-- [Ghi chú AI Agent / workflow](docs/ai-agent-notes.md)
-- [Ví dụ đầu vào](examples/README.md) và [dữ liệu mẫu](test_data/cases.json)
-- [Lộ trình nâng cấp](ROADMAP.md)
-- [Tài nguyên trực tuyến và mã nguồn mở](RESOURCES.md)
-- [Nhật ký thay đổi](CHANGELOG.md)
+| Dự án | GitHub upstream | Cách sử dụng |
+| --- | --- | --- |
+| **OpenAI Agents SDK** | https://github.com/openai/openai-agents-python | Thư viện Python chuẩn bị cho bước chuyển sang LLM |
+| **Godot Editor MCP** | https://github.com/hybridindie/godot-mcp | MCP server + Godot addon để kết nối AI với editor |
 
-Các tài liệu trên hỗ trợ học tập, **không có nghĩa MVP hiện tại đã tích hợp LLM hay các framework được dẫn link**.
+Repository **khai báo dependency và ghi tài liệu tích hợp**, không sao chép toàn bộ source của hai dự án upstream và **chưa kết nối chúng vào pipeline đang chạy**.
+
+Hướng dẫn chi tiết cho Windows, phiên bản, môi trường Python tách biệt, addon Godot và an toàn:
+
+**[docs/OPEN_SOURCE_INTEGRATIONS.md](docs/OPEN_SOURCE_INTEGRATIONS.md)**.
+
+### Cài tùy chọn
+
+- OpenAI Agents SDK: `requirements-agents.txt` và demo `examples/sdk_smoke.py` (cần `OPENAI_API_KEY`; có thể phát sinh chi phí).
+- Godot Editor MCP: `requirements-godot-mcp.txt` (cần addon trong Godot; nên dùng Python 3.11 riêng).
+
+Không cần hai dependency này để chạy 22 bài kiểm thử offline đang có.
+
+## Cấu trúc
+
+```text
+godot-ai-agents/
+├── coordinator.py
+├── planner.py
+├── developer.py
+├── reviewer.py
+├── main.py
+├── tests/
+├── generated/
+├── examples/sdk_smoke.py
+├── requirements-dev.txt
+├── requirements-agents.txt
+├── requirements-godot-mcp.txt
+└── docs/OPEN_SOURCE_INTEGRATIONS.md
+```
+
+## Quy tắc an toàn
+
+- Không commit API key, token, `.env` hoặc thư mục môi trường ảo.
+- Thử Agent và Godot MCP trên **bản sao dự án game**, đọc dữ liệu trước khi cấp quyền sửa.
+- Xem diff, duyệt thủ công và chạy test trước khi chép kết quả vào game chính.
+- Chỉ ghi nhận PASS nếu đã chạy kiểm thử và có bằng chứng.
+
+## Nguồn học tập và tiến độ
+
+- [Tài liệu kiến trúc](docs/architecture.md)
+- [Ghi chú AI Agent](docs/ai-agent-notes.md)
+- [ROADMAP.md](ROADMAP.md) · [CHANGELOG.md](CHANGELOG.md) · [RESOURCES.md](RESOURCES.md)
+- [Tài liệu OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)
+- [Tài liệu Godot Editor MCP](https://hybridindie.github.io/godot-mcp/)
+
+Lịch sử phát triển từ dự án Python giữa kỳ được bảo toàn khi tách repository. Hai dự án upstream đều phát hành dưới giấy phép **MIT**; khi phân phối bản sao mã upstream phải giữ các thông báo giấy phép liên quan.
