@@ -1,15 +1,20 @@
 
 from pathlib import Path
+from collections.abc import Callable
 
 from planner import plan_task
 from developer import develop, generate_player
 from reviewer import review, review_player
 
 
-def run_pipeline(task: str, output_dir="generated") -> dict:
+def run_pipeline(
+    task: str,
+    output_dir="generated",
+    planner_func: Callable[[str], list[str]] = plan_task,
+) -> dict:
     """Chay Planner, Developer va Reviewer."""
 
-    plan = plan_task(task)
+    plan = planner_func(task)
     work = develop(plan)
     report = review(plan, work)
 
