@@ -7,18 +7,54 @@ Dự án Python hỗ trợ phát triển game tu tiên 2D trên **Godot 4**, k�
 - **Developer**: Sinh mã nguồn Python mẫu (hướng tới GDScript cho Godot).
 - **Reviewer**: Kiểm tra tĩnh cú pháp, lớp/hàm và từ khóa hướng di chuyển.
 
-> **Trạng thái:** v1.6 là hệ thống Python **offline/deterministic**, chưa phải bốn AI Agent chạy bằng LLM, chưa thao tác trực tiếp với Godot. Kết quả kiểm thử baseline đã được xác nhận là **22 passed** trước khi thêm dependency. Kiểm tra tĩnh không đồng nghĩa đã kiểm tra hành vi khi chạy game.
+> **Trạng thái v2.0:** Coordinator hỗ trợ hai chế độ Planner: `offline`
+> (mặc định, deterministic) và `ai` (OpenAI Agents SDK). Developer và
+> Reviewer hiện vẫn là các thành phần mô phỏng/kiểm tra cục bộ. Dự án chưa
+> thao tác trực tiếp với Godot và chưa tích hợp OmniRoute.
 
-## Bắt đầu với pipeline hiện có
+## Cấu trúc 4 Agent
 
-Cần Python 3.12+ và VS Code/PowerShell (người phát triển đang sử dụng Python 3.14).
+| Thành phần | Trách nhiệm hiện tại |
+| --- | --- |
+| **Coordinator** | Chọn Planner, điều phối pipeline và tổng hợp trạng thái. |
+| **Planner** | Lập kế hoạch bằng luật offline hoặc LLM có output `GamePlan`. |
+| **Developer** | Mô phỏng các bước triển khai và sinh một số file mẫu trong `generated/`. |
+| **Reviewer** | Kiểm tra kế hoạch, mã Python sinh ra và hành vi di chuyển tĩnh. |
+
+## Chạy hai chế độ Planner
+
+Môi trường `.venv-agents` dùng Python 3.11. Cài dependency:
 
 ```powershell
 cd D:\godot-ai-agents
-python -m pip install -r requirements-dev.txt
-python coordinator.py
-python -m pytest -v tests
+py -3.11 -m venv .venv-agents
+.\.venv-agents\Scripts\python.exe -m pip install -r requirements-dev.txt
+.\.venv-agents\Scripts\python.exe -m pip install -r requirements-agents.txt
 ```
+
+### Offline — chế độ mặc định
+
+Không cần API key và không gọi dịch vụ AI:
+
+```powershell
+.\.venv-agents\Scripts\python.exe coordinator.py
+# Tương đương:
+.\.venv-agents\Scripts\python.exe coordinator.py --mode offline
+```
+
+### AI Planner
+
+Chế độ này cần API key thật và có thể phát sinh chi phí. Chỉ đặt biến môi
+trường trong Terminal; không ghi khóa vào file hoặc Git:
+
+```powershell
+$env:OPENAI_API_KEY = Read-Host "OPENAI_API_KEY"
+$env:OPENAI_MODEL = "TEN_MODEL_DUOC_CAP_QUYEN"
+.\.venv-agents\Scripts\python.exe coordinator.py --mode ai
+```
+
+AI Planner chỉ lập kế hoạch có cấu trúc. Developer và Reviewer tiếp tục xử lý
+cục bộ; mọi file sinh ra vẫn cần được duyệt thủ công.
 
 Ví dụ yêu cầu: `Tao nhan vat di chuyen trong game 2D`.
 
@@ -31,7 +67,9 @@ Lưu ý: file được sinh ra nằm trong `generated/`. **Không tự động c
 | **OpenAI Agents SDK** | https://github.com/openai/openai-agents-python | Thư viện Python chuẩn bị cho bước chuyển sang LLM |
 | **Godot Editor MCP** | https://github.com/hybridindie/godot-mcp | MCP server + Godot addon để kết nối AI với editor |
 
-Repository **khai báo dependency và ghi tài liệu tích hợp**, không sao chép toàn bộ source của hai dự án upstream và **chưa kết nối chúng vào pipeline đang chạy**.
+Repository **khai báo dependency và ghi tài liệu tích hợp**, không sao chép
+toàn bộ source của hai dự án upstream. OpenAI Agents SDK đã được nối vào nhánh
+AI Planner; Godot Editor MCP chưa được nối vào pipeline.
 
 Hướng dẫn chi tiết cho Windows, phiên bản, môi trường Python tách biệt, addon Godot và an toàn:
 
@@ -42,13 +80,14 @@ Hướng dẫn chi tiết cho Windows, phiên bản, môi trường Python tách
 - OpenAI Agents SDK: `requirements-agents.txt` và demo `examples/sdk_smoke.py` (cần `OPENAI_API_KEY`; có thể phát sinh chi phí).
 - Godot Editor MCP: `requirements-godot-mcp.txt` (cần addon trong Godot; nên dùng Python 3.11 riêng).
 
-Không cần hai dependency này để chạy 22 bài kiểm thử offline đang có.
+Godot Editor MCP không cần thiết để chạy pipeline hoặc bộ kiểm thử hiện tại.
 
 ## Cấu trúc
 
 ```text
 godot-ai-agents/
 ├── coordinator.py
+├── ai_planner.py
 ├── planner.py
 ├── developer.py
 ├── reviewer.py
@@ -61,6 +100,19 @@ godot-ai-agents/
 ├── requirements-godot-mcp.txt
 └── docs/OPEN_SOURCE_INTEGRATIONS.md
 ```
+
+## Kiểm thử
+
+Bộ kiểm thử dùng mock cho AI Planner, vì vậy không cần API key và không gọi API:
+
+```powershell
+.\.venv-agents\Scripts\python.exe -m pytest -q tests
+.\.venv-agents\Scripts\python.exe -m pip check
+```
+
+Lần xác nhận gần nhất trên nhánh `feature/v2.0-ai-planner`: **40 passed**,
+`pip check` không phát hiện dependency hỏng. Đây là kiểm thử Python; không đồng
+nghĩa game đã được chạy hoặc kiểm thử trong Godot Engine.
 
 ## Quy tắc an toàn
 

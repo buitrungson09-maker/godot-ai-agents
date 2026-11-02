@@ -1,9 +1,19 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.test-tmp/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
 
 # Local Python environments and secrets
 .venv/
 .venv-*/
 .env
 .env.local
+.env.*
+!.env.example
+*.pem
+*.key
