@@ -1,18 +1,31 @@
-# Lộ trình phát triển dự án 3 Agent Python
+# Lộ trình Godot AI Agents (4 Agent)
 
-> Đây là kế hoạch **dự kiến**, không phải các tính năng đã hoàn thành.
+> Phân biệt rõ **đã có trong mã nguồn**, **đã thử nghiệm bên ngoài pipeline**, và **chưa hoàn thành**. Mốc kiểm thử baseline được trích từ README; không phải một lần chạy test mới.
 
-| Giai đoạn | Mục tiêu | Tiêu chí hoàn thành |
-|---|---|---|
-| 1 — MVP offline | Planner, Developer, Reviewer mô phỏng | Chạy CLI và bộ kiểm thử |
-| 2 — Tăng độ tin cậy | Thêm dữ liệu mẫu, log và edge cases | Pytest cho đầu vào hợp lệ/không hợp lệ |
-| 3 — LLM Planner | Tích hợp SDK trong nhánh riêng | Phản hồi kế hoạch thực từ LLM, có kiểm soát lỗi |
-| 4 — Developer có tool | Đề xuất patch cho file thử nghiệm | Không tự sửa ngoài thư mục whitelist |
-| 5 — Reviewer thực tế | Chạy lint/test, đọc kết quả | Phân biệt test pass và chất lượng nghiệp vụ |
-| 6 — Dùng cho game 2D | Thử trên dự án mẫu nhỏ | Có diff, test và phê duyệt thủ công |
+| Giai đoạn | Nội dung | Trạng thái |
+| --- | --- | --- |
+| 1. MVP 3 Agent | Planner → Developer mô phỏng → Reviewer, chạy bằng CLI | Đã xây dựng |
+| 2. Bổ sung Coordinator | Điều phối và tổng hợp trạng thái pipeline | Đã xây dựng trên `main` |
+| 3. Sinh mã Python mẫu | Tạo `generated/player.py` với lớp Player và bốn hướng di chuyển | Đã có trong mã nguồn |
+| 4. Reviewer tĩnh | Phân tích AST, kiểm tra phương thức và hướng di chuyển | Đã có trong mã nguồn |
+| 5. Bộ kiểm thử offline | README ghi nhận baseline 22 bài pytest đạt | Đã ghi nhận trong README; cần chạy lại để xác nhận phiên bản mới |
+| 6. Chuẩn bị nguồn mở | Khai báo dependency và tài liệu cho OpenAI Agents SDK, Godot Editor MCP | Đã chuẩn bị; chưa nối vào pipeline |
+| 7. Kết nối MCP với Godot | Chạy trên bản sao dự án, đọc scene và node qua Codex | Đang thử nghiệm; Codex từng báo `connected: false` |
+| 8. Agent dùng LLM | Planner/Developer/Reviewer sử dụng mô hình AI thực | Chưa hoàn thành |
+| 9. GDScript và kiểm thử game | Đề xuất bản vá, chạy lint/test, đối chiếu gameplay Godot | Chưa hoàn thành |
+| 10. Demo end-to-end | Yêu cầu → kế hoạch → code → review → người dùng duyệt → áp dụng bản sao | Mục tiêu tương lai |
 
-## Nguyên tắc
-- Không ghi khóa API vào Git.
-- Các thao tác ghi, xóa, chạy lệnh cần giới hạn quyền và xác nhận.
-- Chỉ đánh dấu hoàn thành khi có commit, bài kiểm thử hoặc minh chứng thực tế.
-- Giữ MVP cũ để đối chiếu với bản tích hợp AI.
+## Ưu tiên gần nhất
+
+1. Ổn định cầu nối Codex ↔ Godot Editor MCP trên bản sao `TuTien2D_MCP_Test` (cổng 9081), xác minh `connected: true`.
+2. Ghi nhận log/bằng chứng đọc scene ở chế độ chỉ đọc trước khi cấp quyền sửa.
+3. Tích hợp LLM Planner qua OpenAI Agents SDK trong nhánh thử nghiệm riêng.
+4. Nâng cấp Developer từ mẫu Python cố định sang đề xuất GDScript, giới hạn đường dẫn ghi.
+5. Bổ sung kiểm thử hành vi thực tế và cơ chế phê duyệt thủ công.
+
+## Nguyên tắc an toàn
+
+- Không đưa API key, token, `.env` hay thư mục venv lên Git.
+- Không thao tác trên dự án Godot gốc khi chưa có phê duyệt; chỉ thử trên bản sao.
+- Không coi `passed: true` của kiểm tra tĩnh là bằng chứng game chạy đúng.
+- Kiểm tra diff và chạy test trước khi nhập kết quả vào dự án chính.
