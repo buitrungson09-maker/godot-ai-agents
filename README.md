@@ -7,20 +7,21 @@ Dự án Python hỗ trợ phát triển game tu tiên 2D trên **Godot 4**, k�
 - **Developer**: Sinh mã nguồn Python mẫu (hướng tới GDScript cho Godot).
 - **Reviewer**: Kiểm tra tĩnh cú pháp, lớp/hàm và từ khóa hướng di chuyển.
 
-> **Trạng thái v2.0:** Coordinator hỗ trợ hai chế độ Planner: `offline`
-> (mặc định, deterministic) và `ai` (OpenAI Agents SDK). Developer và
-> Reviewer hiện vẫn là các thành phần mô phỏng/kiểm tra cục bộ. Dự án chưa
-> thao tác trực tiếp với Godot và chưa tích hợp OmniRoute.
+> **Trạng thái v2.1:** Coordinator hỗ trợ hai chế độ Planner: `offline`
+> (mặc định, deterministic) và `ai` (OpenAI Agents SDK). Trong AI mode,
+> LLM Router chọn OpenAI direct hoặc OmniRoute theo biến môi trường. Toàn bộ
+> kiểm thử hiện dùng mock; dự án chưa gọi API thật hoặc chạy OmniRoute Server.
 
 ## Năng lực đã triển khai và giới hạn
 
-| Thành phần | Hiện trạng v2.0 |
+| Thành phần | Hiện trạng v2.1 |
 | --- | --- |
 | Coordinator | Chọn Planner, điều phối pipeline và tổng hợp trạng thái `failed`, `planning_only`, `ready_for_manual_review` |
 | Planner | Chạy luật offline hoặc OpenAI Agents SDK với structured output `GamePlan` |
+| LLM Router | Chọn `direct` hoặc `omniroute`; không tự fallback sang provider khác |
 | Developer | Ghi nhật ký mô phỏng và sinh mẫu Python `generated/player.py` |
 | Reviewer | Kiểm tra báo cáo mô phỏng, cú pháp AST, class/phương thức `Player` và chuỗi 4 hướng di chuyển |
-| Kiểm thử | **40 passed** trong lần xác minh v2.0; AI được mock, không gọi API thật |
+| Kiểm thử | **59 passed** trong lần xác minh v2.1; AI được mock, không gọi API thật |
 | OpenAI Agents SDK | Đã nối vào AI Planner tùy chọn; chưa smoke-test bằng LLM thật |
 | Godot Editor MCP | Có ghi nhận thử nghiệm thủ công trên bản sao game; chưa tích hợp vào pipeline và chưa xác nhận kết nối ổn định |
 
@@ -49,16 +50,35 @@ Không cần API key và không gọi dịch vụ AI:
 .\.venv-agents\Scripts\python.exe coordinator.py --mode offline
 ```
 
-### AI Planner
+### AI Planner — OpenAI direct
 
 Chế độ này cần API key thật và có thể phát sinh chi phí. Chỉ đặt biến môi
 trường trong Terminal; không ghi khóa vào file hoặc Git:
 
 ```powershell
+$env:LLM_PROVIDER = "direct"
 $env:OPENAI_API_KEY = Read-Host "OPENAI_API_KEY"
 $env:OPENAI_MODEL = "TEN_MODEL_DUOC_CAP_QUYEN"
 .\.venv-agents\Scripts\python.exe coordinator.py --mode ai
 ```
+
+### AI Planner — OmniRoute
+
+OmniRoute phải được người dùng cài đặt và vận hành riêng. Dự án chỉ tạo custom
+client trỏ đến gateway; không tự khởi động server và không tự chọn fallback:
+
+```powershell
+$env:LLM_PROVIDER = "omniroute"
+$env:OMNIROUTE_API_KEY = Read-Host "OMNIROUTE_API_KEY"
+$env:OMNIROUTE_MODEL = "PROVIDER/MODEL_DA_DUOC_CHO_PHEP"
+$env:OMNIROUTE_BASE_URL = "http://127.0.0.1:20128/v1"
+$env:LLM_TIMEOUT_SECONDS = "30"
+$env:LLM_MAX_RETRIES = "1"
+.\.venv-agents\Scripts\python.exe coordinator.py --mode ai
+```
+
+Xem [.env.example](.env.example) để biết tên biến. Không ghi API key thật vào
+file `.env`, source code, log hoặc Git.
 
 AI Planner chỉ lập kế hoạch có cấu trúc. Developer và Reviewer tiếp tục xử lý
 cục bộ; mọi file sinh ra vẫn cần được duyệt thủ công.
@@ -95,6 +115,7 @@ Godot Editor MCP không cần thiết để chạy pipeline hoặc bộ kiểm t
 godot-ai-agents/
 ├── coordinator.py
 ├── ai_planner.py
+├── llm_router.py
 ├── planner.py
 ├── developer.py
 ├── reviewer.py
@@ -117,9 +138,9 @@ Bộ kiểm thử dùng mock cho AI Planner, vì vậy không cần API key và 
 .\.venv-agents\Scripts\python.exe -m pip check
 ```
 
-Lần xác nhận gần nhất trên nhánh `feature/v2.0-ai-planner`: **40 passed**,
+Lần xác nhận gần nhất trên nhánh `feature/v2.1-omniroute`: **59 passed**,
 `pip check` không phát hiện dependency hỏng. Đây là kiểm thử Python; không đồng
-nghĩa game đã được chạy hoặc kiểm thử trong Godot Engine.
+nghĩa API, OmniRoute Server hoặc game đã được chạy thực tế.
 
 ## Quy tắc an toàn
 

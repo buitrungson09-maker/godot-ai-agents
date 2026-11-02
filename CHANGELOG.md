@@ -1,5 +1,25 @@
 # Nhật ký thay đổi
 
+## 2026-11-02 — Chuẩn bị Godot AI Agents v2.1
+
+### Thêm mới
+
+- Thêm `llm_router.py` với hai provider `direct` và `omniroute`.
+- OmniRoute dùng `AsyncOpenAI` và `OpenAIChatCompletionsModel` của Agents SDK.
+- Thêm `.env.example` chỉ chứa tên biến và giá trị mẫu không bí mật.
+- Thêm kiểm thử cấu hình, custom client, bảo vệ API key và tích hợp Planner.
+
+### Giới hạn đã xác nhận
+
+- Không có fallback tự động giữa các provider.
+- Offline vẫn là chế độ mặc định; direct giữ cấu hình OpenAI của v2.0.
+- Chưa gọi API thật, chưa cài/chạy OmniRoute Server và chưa kiểm thử Godot.
+
+### Xác minh
+
+- Toàn bộ bộ test: **59 passed** bằng `.venv-agents` Python 3.11.
+- `pip check`: không phát hiện dependency hỏng.
+
 ## 2026-11-02 — Chuẩn bị Godot AI Agents v2.0
 
 ### Thêm mới
