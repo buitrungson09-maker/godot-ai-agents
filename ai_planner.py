@@ -1,9 +1,9 @@
 """AI Planner: đề xuất kế hoạch, không ghi file hoặc thực thi mã."""
 
-import os
-
 from agents import Agent, RunConfig, Runner
 from pydantic import BaseModel, Field
+
+from llm_router import build_model_from_env
 
 
 class AIPlannerError(RuntimeError):
@@ -58,12 +58,7 @@ def plan_task_ai(task: str) -> GamePlan:
     if not isinstance(task, str) or not task.strip():
         raise ValueError("Yêu cầu không được rỗng.")
 
-    if not os.getenv("OPENAI_API_KEY", "").strip():
-        raise ValueError("Chưa cấu hình biến môi trường OPENAI_API_KEY.")
-
-    model = os.getenv("OPENAI_MODEL", "").strip()
-    if not model:
-        raise ValueError("Chưa cấu hình biến môi trường OPENAI_MODEL.")
+    model = build_model_from_env()
 
     planner = Agent(
         name="Godot AI Planner",

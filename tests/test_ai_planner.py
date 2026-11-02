@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 
 import pytest
+from agents import OpenAIChatCompletionsModel
 
 import ai_planner
 from ai_planner import AIPlannerError, GamePlan, plan_task_ai
@@ -25,6 +26,7 @@ def make_plan() -> GamePlan:
 def configure_environment(monkeypatch: pytest.MonkeyPatch) -> None:
     """Cấu hình biến giả; các giá trị này không phải thông tin xác thực thật."""
 
+    monkeypatch.setenv("LLM_PROVIDER", "direct")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-real")
     monkeypatch.setenv("OPENAI_MODEL", "test-model")
 
@@ -51,6 +53,7 @@ def test_rejects_empty_or_non_string_input(task):
 
 
 def test_rejects_missing_api_key(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "direct")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     monkeypatch.setenv("OPENAI_MODEL", "test-model")
 
@@ -59,6 +62,7 @@ def test_rejects_missing_api_key(monkeypatch):
 
 
 def test_rejects_missing_model(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "direct")
     monkeypatch.setenv("OPENAI_API_KEY", "test-key-not-real")
     monkeypatch.delenv("OPENAI_MODEL", raising=False)
 
@@ -90,6 +94,27 @@ def test_returns_valid_plan_without_calling_api(monkeypatch):
     assert captured["run_config"].tracing_disabled is True
     assert captured["agent"].model == "test-model"
     assert captured["agent"].output_type is GamePlan
+
+
+def test_omniroute_model_is_used_without_calling_api(monkeypatch):
+    monkeypatch.setenv("LLM_PROVIDER", "omniroute")
+    monkeypatch.setenv("OMNIROUTE_API_KEY", "gateway-key-not-real")
+    monkeypatch.setenv("OMNIROUTE_MODEL", "provider/model")
+    monkeypatch.setenv("OMNIROUTE_BASE_URL", "http://127.0.0.1:20128/v1")
+    expected_plan = make_plan()
+    captured = {}
+
+    def fake_run_sync(agent, **kwargs):
+        captured["model"] = agent.model
+        return SimpleNamespace(final_output=expected_plan)
+
+    monkeypatch.setattr(ai_planner.Runner, "run_sync", fake_run_sync)
+
+    result = plan_task_ai("Tạo nhân vật")
+
+    assert result is expected_plan
+    assert isinstance(captured["model"], OpenAIChatCompletionsModel)
+    assert captured["model"].model == "provider/model"
 
 
 def test_rejects_invalid_planner_output(monkeypatch):
