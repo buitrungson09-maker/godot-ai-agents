@@ -9,6 +9,22 @@ Dự án Python hỗ trợ phát triển game tu tiên 2D trên **Godot 4**, k�
 
 > **Trạng thái:** v1.6 là hệ thống Python **offline/deterministic**, chưa phải bốn AI Agent chạy bằng LLM, chưa thao tác trực tiếp với Godot. Kết quả kiểm thử baseline đã được xác nhận là **22 passed** trước khi thêm dependency. Kiểm tra tĩnh không đồng nghĩa đã kiểm tra hành vi khi chạy game.
 
+## Năng lực đã triển khai và giới hạn
+
+| Thành phần | Hiện trạng trên nhánh `main` |
+| --- | --- |
+| Coordinator | Điều phối pipeline, tổng hợp trạng thái `failed`, `planning_only`, `ready_for_manual_review` |
+| Planner | Phân loại yêu cầu theo từ khóa, tạo kế hoạch ba bước |
+| Developer | Ghi nhật ký mô phỏng và sinh mẫu Python `generated/player.py` |
+| Reviewer | Kiểm tra báo cáo mô phỏng, cú pháp AST, class/phương thức `Player` và chuỗi 4 hướng di chuyển |
+| Kiểm thử | Baseline **22 passed** theo báo cáo trước đó; chưa chạy lại trong lần cập nhật tài liệu này |
+| OpenAI Agents SDK | Đã chuẩn bị dependency/ví dụ, **chưa tích hợp LLM vào pipeline chính** |
+| Godot Editor MCP | Đã thử kết nối thủ công với bản sao game; kết nối qua Codex **chưa ổn định**, chưa tích hợp vào pipeline |
+
+`ready_for_manual_review` **không đồng nghĩa** mã đã được triển khai hoặc game chạy đúng. Kiểm tra AST là kiểm tra tĩnh, không thay thế chạy thử game.
+
+Xem [kiến trúc 4 Agent](docs/architecture.md), [lộ trình và trạng thái](ROADMAP.md), [nhật ký thay đổi](CHANGELOG.md).
+
 ## Bắt đầu với pipeline hiện có
 
 Cần Python 3.12+ và VS Code/PowerShell (người phát triển đang sử dụng Python 3.14).
