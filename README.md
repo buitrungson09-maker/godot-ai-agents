@@ -12,14 +12,21 @@ Dự án Python hỗ trợ phát triển game tu tiên 2D trên **Godot 4**, k�
 > Reviewer hiện vẫn là các thành phần mô phỏng/kiểm tra cục bộ. Dự án chưa
 > thao tác trực tiếp với Godot và chưa tích hợp OmniRoute.
 
-## Cấu trúc 4 Agent
+## Năng lực đã triển khai và giới hạn
 
-| Thành phần | Trách nhiệm hiện tại |
+| Thành phần | Hiện trạng v2.0 |
 | --- | --- |
-| **Coordinator** | Chọn Planner, điều phối pipeline và tổng hợp trạng thái. |
-| **Planner** | Lập kế hoạch bằng luật offline hoặc LLM có output `GamePlan`. |
-| **Developer** | Mô phỏng các bước triển khai và sinh một số file mẫu trong `generated/`. |
-| **Reviewer** | Kiểm tra kế hoạch, mã Python sinh ra và hành vi di chuyển tĩnh. |
+| Coordinator | Chọn Planner, điều phối pipeline và tổng hợp trạng thái `failed`, `planning_only`, `ready_for_manual_review` |
+| Planner | Chạy luật offline hoặc OpenAI Agents SDK với structured output `GamePlan` |
+| Developer | Ghi nhật ký mô phỏng và sinh mẫu Python `generated/player.py` |
+| Reviewer | Kiểm tra báo cáo mô phỏng, cú pháp AST, class/phương thức `Player` và chuỗi 4 hướng di chuyển |
+| Kiểm thử | **40 passed** trong lần xác minh v2.0; AI được mock, không gọi API thật |
+| OpenAI Agents SDK | Đã nối vào AI Planner tùy chọn; chưa smoke-test bằng LLM thật |
+| Godot Editor MCP | Có ghi nhận thử nghiệm thủ công trên bản sao game; chưa tích hợp vào pipeline và chưa xác nhận kết nối ổn định |
+
+`ready_for_manual_review` **không đồng nghĩa** mã đã được triển khai hoặc game chạy đúng. Kiểm tra AST là kiểm tra tĩnh, không thay thế chạy thử game.
+
+Xem [kiến trúc 4 Agent](docs/architecture.md), [lộ trình và trạng thái](ROADMAP.md), [nhật ký thay đổi](CHANGELOG.md).
 
 ## Chạy hai chế độ Planner
 
