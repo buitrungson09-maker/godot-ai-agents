@@ -5,26 +5,49 @@ from main import run_pipeline
 from reviewer import review_player_behavior
 
 
+# ==================================================
+# 1. CAC HAM GOI AI AGENT
+# ==================================================
+
 def _run_ai_planner(task: str):
-    """Goi Planner AI khi can."""
+    """Goi Planner AI de lap ke hoach."""
     from ai_planner import plan_task_ai
 
     return plan_task_ai(task)
 
 
 def _run_ai_developer(task: str):
-    """Goi Developer AI, khong tu ghi file."""
+    """Goi Developer AI de sinh GDScript."""
     from ai_developer import develop_task_ai
 
     return develop_task_ai(task)
 
 
 def _run_ai_reviewer(task: str, gdscript: str):
-    """Goi Reviewer AI de danh gia GDScript."""
+    """Goi Reviewer AI de danh gia ma GDScript."""
     from ai_reviewer import review_gdscript_ai
 
     return review_gdscript_ai(task, gdscript)
 
+
+def _run_ai_repair(
+    task: str,
+    original_code: str,
+    errors: list[str],
+):
+    """Yeu cau Developer AI sua ma theo loi Reviewer."""
+    from ai_developer import revise_task_ai
+
+    return revise_task_ai(
+        task,
+        original_code,
+        errors,
+    )
+
+
+# ==================================================
+# 2. COORDINATOR
+# ==================================================
 
 def coordinate(
     task: str,
@@ -32,8 +55,9 @@ def coordinate(
     mode="offline",
     developer_mode="offline",
     reviewer_mode="offline",
+    auto_repair=False,
 ) -> dict:
-    """Dieu phoi Planner, Developer va Reviewer."""
+    """Dieu phoi cac AI Agent va sua loi toi da mot lan."""
 
     if not task.strip():
         raise ValueError("Yeu cau khong duoc rong.")
@@ -63,7 +87,19 @@ def coordinate(
             "Reviewer AI yeu cau Developer AI."
         )
 
-    # 1. Planner
+    if auto_repair and not (
+        mode == "ai"
+        and developer_mode == "ai"
+        and reviewer_mode == "ai"
+    ):
+        raise ValueError(
+            "Auto repair yeu cau ca 3 AI Agent."
+        )
+
+    # --------------------------------------------------
+    # BUOC 1: PLANNER
+    # --------------------------------------------------
+
     if mode == "offline":
         result = run_pipeline(
             task,
@@ -75,7 +111,9 @@ def coordinate(
         result = run_pipeline(
             task,
             output_dir=output_dir,
-            planner_func=lambda _task: ai_plan.implementation_steps,
+            planner_func=lambda _task: (
+                ai_plan.implementation_steps
+            ),
         )
 
         result["ai_plan"] = ai_plan.model_dump()
@@ -83,24 +121,32 @@ def coordinate(
     result["planner_mode"] = mode
     result["developer_mode"] = developer_mode
     result["reviewer_mode"] = reviewer_mode
+    result["repair_attempts"] = 0
 
-    # 2. Kiem tra pipeline mo phong
+    # --------------------------------------------------
+    # BUOC 2: KIEM TRA PIPELINE HIEN TAI
+    # --------------------------------------------------
+
     if not result["report"]["passed"]:
         result["status"] = "failed"
         return result
 
-    # 3. Developer AI
+    # --------------------------------------------------
+    # BUOC 3: DEVELOPER AI
+    # --------------------------------------------------
+
     if developer_mode == "ai":
         developer_input = (
-            f"Yeu cau: {task}\n"
+            f"Yeu cau goc:\n{task}\n\n"
             "Ke hoach cua Planner AI:\n"
             + "\n".join(
-                f"- {step}" for step in result["plan"]
+                f"- {step}"
+                for step in result["plan"]
             )
-            + "\n"
-            "Tao mot file GDScript cho Godot 4 "
+            + "\n\n"
+            "Hay tao mot file GDScript cho Godot 4 "
             "PC goc nhin top-down. "
-            "Khong tu sua du an Godot."
+            "Khong tu sua file hay du an Godot."
         )
 
         generated = _run_ai_developer(
@@ -114,50 +160,129 @@ def coordinate(
 
         result["ai_developer"] = generated.model_dump()
 
-        # 4. Reviewer AI
-        if reviewer_mode == "ai":
-            review_input = (
-                f"Yeu cau goc: {task}\n"
-                f"Ten file: {generated.file_name}\n"
-                "Kiem tra ma co dap ung yeu cau "
-                "va tuong thich Godot 4 hay khong."
-            )
-
-            ai_review = _run_ai_reviewer(
-                review_input,
-                generated.gdscript,
-            )
-
-            result["ai_review"] = ai_review.model_dump()
-
-            if ai_review.passed:
-                result["status"] = (
-                    "reviewed_for_manual_approval"
-                )
-            else:
-                result["status"] = (
-                    "review_changes_required"
-                )
-
-        else:
+        # Khong bat Reviewer AI
+        if reviewer_mode == "offline":
             result["status"] = (
                 "generated_for_manual_review"
+            )
+            return result
+
+        # --------------------------------------------------
+        # BUOC 4: REVIEWER AI LAN 1
+        # --------------------------------------------------
+
+        review_input = (
+            f"Yeu cau goc: {task}\n"
+            f"Ten file: {generated.file_name}\n"
+            "Kiem tra GDScript theo yeu cau goc. "
+            "Phan biet loi bat buoc va de xuat mo rong. "
+            "Khong tu nhan da chay Godot Engine."
+        )
+
+        first_review = _run_ai_reviewer(
+            review_input,
+            generated.gdscript,
+        )
+
+        result["ai_review"] = (
+            first_review.model_dump()
+        )
+
+        # Truong hop Reviewer PASS ngay
+        if first_review.passed:
+            result["status"] = (
+                "reviewed_for_manual_approval"
+            )
+            return result
+
+        # Truong hop Reviewer FAIL nhung khong bat auto repair
+        if not auto_repair:
+            result["status"] = (
+                "review_changes_required"
+            )
+            return result
+
+        # Khong co loi cu the de Developer sua
+        if not first_review.errors:
+            result["status"] = (
+                "review_changes_required"
+            )
+            return result
+
+        # --------------------------------------------------
+        # BUOC 5: DEVELOPER AI SUA MA MOT LAN
+        # --------------------------------------------------
+
+        revised = _run_ai_repair(
+            task,
+            generated.gdscript,
+            first_review.errors,
+        )
+
+        if not revised.gdscript.strip():
+            raise ValueError(
+                "Developer AI tra ve ma sua rong."
+            )
+
+        if not revised.file_name.lower().endswith(".gd"):
+            raise ValueError(
+                "Developer AI phai tra ve file .gd."
+            )
+
+        result["ai_revised_developer"] = (
+            revised.model_dump()
+        )
+
+        result["repair_attempts"] = 1
+
+        # --------------------------------------------------
+        # BUOC 6: REVIEWER AI KIEM TRA LAI
+        # --------------------------------------------------
+
+        second_review_input = (
+            f"Yeu cau goc: {task}\n"
+            f"Ten file: {revised.file_name}\n"
+            "Day la GDScript da duoc Developer sua. "
+            "Hay danh gia lai doc lap theo yeu cau goc. "
+            "Khong mac dinh ma da sua la dung."
+        )
+
+        second_review = _run_ai_reviewer(
+            second_review_input,
+            revised.gdscript,
+        )
+
+        result["ai_second_review"] = (
+            second_review.model_dump()
+        )
+
+        # Dung tai day, khong sua lan thu hai
+        if second_review.passed:
+            result["status"] = (
+                "reviewed_for_manual_approval"
+            )
+        else:
+            result["status"] = (
+                "review_changes_required"
             )
 
         return result
 
-    # 5. Developer offline
+    # --------------------------------------------------
+    # BUOC 7: DEVELOPER OFFLINE
+    # --------------------------------------------------
+
     if "generated_file" not in result:
         result["status"] = "planning_only"
         return result
 
-    # 6. Reviewer offline: kiem tra Python
     source_report = result["source_report"]
 
     if not source_report["passed"]:
         result["status"] = "failed"
         return result
 
+    # Reviewer offline kiem tra Python Player
     behavior_report = review_player_behavior(
         result["generated_file"]
     )
@@ -174,30 +299,40 @@ def coordinate(
     return result
 
 
+# ==================================================
+# 3. GIAO DIEN DONG LENH
+# ==================================================
+
 def main(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(
-        description="Godot AI Agents Coordinator.",
+        description="Godot AI Agents Coordinator v2.4",
     )
 
     parser.add_argument(
         "--mode",
         choices=("offline", "ai"),
         default="offline",
-        help="Planner mode.",
+        help="Chon Planner mode.",
     )
 
     parser.add_argument(
         "--developer",
         choices=("offline", "ai"),
         default="offline",
-        help="Developer mode.",
+        help="Chon Developer mode.",
     )
 
     parser.add_argument(
         "--reviewer",
         choices=("offline", "ai"),
         default="offline",
-        help="Reviewer mode.",
+        help="Chon Reviewer mode.",
+    )
+
+    parser.add_argument(
+        "--auto-repair",
+        action="store_true",
+        help="Cho phep Developer AI sua loi toi da mot lan.",
     )
 
     args = parser.parse_args(argv)
@@ -207,9 +342,11 @@ def main(argv: list[str] | None = None):
     )
 
     try:
-        # Khong truyen tham so moi khi o che do mac dinh.
-        # Giu tuong thich voi cac test CLI cu.
-        kwargs = {"mode": args.mode}
+        # Chi truyen tham so bo sung khi can.
+        # Giu tuong thich voi test CLI cu.
+        kwargs = {
+            "mode": args.mode,
+        }
 
         if args.developer == "ai":
             kwargs["developer_mode"] = "ai"
@@ -217,11 +354,21 @@ def main(argv: list[str] | None = None):
         if args.reviewer == "ai":
             kwargs["reviewer_mode"] = "ai"
 
-        result = coordinate(task, **kwargs)
+        if args.auto_repair:
+            kwargs["auto_repair"] = True
+
+        result = coordinate(
+            task,
+            **kwargs,
+        )
 
     except (ValueError, OSError, RuntimeError) as error:
         print("Loi:", error)
         return
+
+    # --------------------------------------------------
+    # COORDINATOR
+    # --------------------------------------------------
 
     print("\n=== COORDINATOR ===")
     print("Yeu cau:", result["task"])
@@ -238,22 +385,33 @@ def main(argv: list[str] | None = None):
         result.get("reviewer_mode", "offline"),
     )
 
+    print(
+        "So lan sua:",
+        result.get("repair_attempts", 0),
+    )
+
+    # --------------------------------------------------
+    # PLANNER
+    # --------------------------------------------------
+
     print("\n=== PLANNER ===")
 
     for step in result["plan"]:
         print("-", step)
+
+    # --------------------------------------------------
+    # DEVELOPER
+    # --------------------------------------------------
 
     print("\n=== DEVELOPER ===")
 
     if "ai_developer" in result:
         generated = result["ai_developer"]
 
-        print("AI da sinh GDScript.")
-
-        print("\n=== FILE DE XUAT ===")
+        print("\n=== FILE BAN DAU ===")
         print(generated["file_name"])
 
-        print("\n=== GDSCRIPT ===")
+        print("\n=== GDSCRIPT BAN DAU ===")
         print(generated["gdscript"])
 
         print("\n=== GIAI THICH ===")
@@ -268,42 +426,64 @@ def main(argv: list[str] | None = None):
     else:
         print("Chua co ma nguon duoc tao.")
 
+    # --------------------------------------------------
+    # DEVELOPER SUA LOI
+    # --------------------------------------------------
+
+    if "ai_revised_developer" in result:
+        revised = result["ai_revised_developer"]
+
+        print("\n=== DEVELOPER SUA LOI ===")
+
+        print("File:", revised["file_name"])
+
+        print("\n=== GDSCRIPT DA SUA ===")
+        print(revised["gdscript"])
+
+        print("\n=== GIAI THICH SUA LOI ===")
+        print(revised["explanation"])
+
+    # --------------------------------------------------
+    # REVIEWER
+    # --------------------------------------------------
+
     print("\n=== REVIEWER ===")
     print("Pipeline:", result["report"])
 
     if "ai_review" in result:
-        review_result = result["ai_review"]
+        review_data = result["ai_review"]
 
-        print("\n=== AI REVIEWER ===")
-        print(
-            "Passed:",
-            review_result["passed"],
-        )
-        print(
-            "Score:",
-            review_result["score"],
-        )
-        print(
-            "Errors:",
-            review_result["errors"],
-        )
-        print(
-            "Warnings:",
-            review_result["warnings"],
-        )
-        print(
-            "Suggestions:",
-            review_result["suggestions"],
-        )
+        print("\n=== AI REVIEW LAN 1 ===")
+        print("Passed:", review_data["passed"])
+        print("Score:", review_data["score"])
+        print("Errors:", review_data["errors"])
+        print("Warnings:", review_data["warnings"])
+        print("Suggestions:", review_data["suggestions"])
         print(
             "Explanation:",
-            review_result["explanation"],
+            review_data["explanation"],
         )
 
-    elif "ai_developer" in result:
+    if "ai_second_review" in result:
+        second = result["ai_second_review"]
+
+        print("\n=== AI REVIEW LAN 2 ===")
+        print("Passed:", second["passed"])
+        print("Score:", second["score"])
+        print("Errors:", second["errors"])
+        print("Warnings:", second["warnings"])
+        print("Suggestions:", second["suggestions"])
         print(
-            "Chua kiem tra GDScript "
-            "bang Reviewer AI."
+            "Explanation:",
+            second["explanation"],
+        )
+
+    elif (
+        "ai_developer" in result
+        and "ai_review" not in result
+    ):
+        print(
+            "Chua kiem tra GDScript bang Reviewer AI."
         )
 
     if "source_report" in result:
@@ -321,6 +501,7 @@ def main(argv: list[str] | None = None):
     print(
         "\nLuu y: Chua xac minh bang Godot Engine."
     )
+
     print(
         "Can duyet thu cong truoc khi dua vao game."
     )
