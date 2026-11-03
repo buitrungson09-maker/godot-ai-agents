@@ -87,6 +87,14 @@ Ví dụ yêu cầu: `Tao nhan vat di chuyen trong game 2D`.
 
 Lưu ý: file được sinh ra nằm trong `generated/`. **Không tự động chép hay ghi đè file trong game Godot thật.** Quy trình duyệt thủ công phải được duy trì.
 
+## Mã nguồn mở OmniRoute
+
+- **GitHub upstream:** [diegosouzapw/OmniRoute](https://github.com/diegosouzapw/OmniRoute)
+- **npm:** [omniroute](https://www.npmjs.com/package/omniroute)
+- **Vai trò trong dự án:** Gateway định tuyến yêu cầu từ AI Planner tới mô hình AI qua API tương thích OpenAI; cấu hình qua `llm_router.py` và các biến `OMNIROUTE_*`.
+- **Tích hợp:** Chỉ dẫn liên kết đến mã nguồn gốc; **không sao chép hoặc nhúng toàn bộ mã nguồn OmniRoute** vào repository này. Server OmniRoute chạy độc lập.
+- **Kiểm thử thực tế:** Đã xác minh riêng đường đi Python → OmniRoute → Codex và chạy `ai_planner.py` nhận `GamePlan` JSON. Các thành phần còn lại không vì thế được xem là đã tích hợp AI hoàn chỉnh.
+
 ## Hai dự án mã nguồn mở được chọn
 
 | Dự án | GitHub upstream | Cách sử dụng |
